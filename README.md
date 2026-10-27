@@ -1,6 +1,13 @@
 # pixel-hud
 
-An 8-bit, Claude-themed heads-up display for Claude Code. It opens as a pane beside the chat and draws one pixel-art game screen:
+An 8-bit, Claude-themed heads-up display for Claude Code. It opens as a pane beside the chat and draws one pixel-art game screen.
+
+<p align="center">
+  <img src="assets/screenshot.png" alt="Pixel HUD pane mid-task: usage energy bars, the pixel mascot walking the progress track at 60%, a stats grid, the quest log and two subagent cards" width="364">
+  <br><sub>Sample render of the pane mid-task (sample data)</sub>
+</p>
+
+The screen shows:
 
 - **Usage**: your plan's 5-hour session window and weekly limit as energy bars, with time until each resets, plus the session's total spend
 - **Play area**: a little pixel mascot walks a segmented progress track toward the finish flag while Claude works, then celebrates with "TASK CLEAR!"; it naps when nothing is running
