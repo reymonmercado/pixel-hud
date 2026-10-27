@@ -1,0 +1,6 @@
+{
+  "name": "spark-progress",
+  "version": "0.1.0",
+  "description": "A Claude-themed pane showing the running task's progress, its subagents, tokens, cost and elapsed time",
+  "types": "./types/index.d.ts"
+}
