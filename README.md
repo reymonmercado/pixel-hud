@@ -1,23 +1,23 @@
-# spark-progress
+# pixel-hud
 
-An 8-bit, Claude-themed progress panel for Claude Code. While Claude works, a little pixel mascot walks along a segmented progress bar, and the panel shows:
+An 8-bit, Claude-themed heads-up display for Claude Code. It opens as a pane beside the chat and draws one pixel-art game screen:
 
-- **Progress** of the running task, driven by Claude's task list when it keeps one
-- **Subagents** ("party") with their own status, time, tokens and estimated cost
-- **Stats**: elapsed time, cost, tokens, steps and tool calls
-- **Quest log**: Claude's task list as a pixel checklist
-- **Usage**: your plan's current 5-hour session window and weekly limit, with reset times, plus the session's total spend
+- **Usage**: your plan's 5-hour session window and weekly limit as energy bars, with time until each resets, plus the session's total spend
+- **Play area**: a little pixel mascot walks a segmented progress track toward the finish flag while Claude works, then celebrates with "TASK CLEAR!"; it naps when nothing is running
+- **Stats**: elapsed time, cost, tokens, model calls, tool calls and subagents (hover a box for details)
+- **Quests**: Claude's task list as a pixel checklist with a done count
+- **Party**: a card per subagent with its own mascot, status, time, tokens and estimated cost
 
-It draws pixel art in the Claude desktop app and VS Code, and block-character art in the terminal. Type `/progress` to reopen the panel.
+Text uses a legible 5x7 pixel font. In the Claude desktop app and VS Code it draws pixel art; in the terminal it uses block characters. Type `/progress` to reopen the pane.
 
-Task cost is the session's real spend since the prompt; each subagent's cost is an estimate split by token weight. The usage meters appear on a Claude subscription; with API billing there are no plan limits to show.
+Task cost is the session's real spend since the prompt; each subagent's cost is an estimate split by token weight. The usage bars appear on a Claude subscription; with API billing there are no plan limits to show.
 
 ## Install
 
 At the prompt of a Claude Code terminal session:
 
 ```
-/plugin install spark-progress --marketplace reymonmercado/spark-progress
+/plugin install pixel-hud --marketplace reymonmercado/pixel-hud
 ```
 
 Answer `y` to add the marketplace, then pick a scope (user is first).
@@ -25,7 +25,7 @@ Answer `y` to add the marketplace, then pick a scope (user is first).
 From a shell:
 
 ```bash
-claude plugin install spark-progress --marketplace reymonmercado/spark-progress
+claude plugin install pixel-hud --marketplace reymonmercado/pixel-hud
 ```
 
-In the desktop app, where `/plugin` does not run: click **+** next to the prompt box, then **Plugins**, **Add marketplace** with `reymonmercado/spark-progress`, then **Add plugin**.
+In the desktop app, where `/plugin` does not run: click **+** next to the prompt box, then **Plugins**, **Add marketplace** with `reymonmercado/pixel-hud`, then **Add plugin**.

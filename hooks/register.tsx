@@ -5,7 +5,7 @@ import type { Limit, Plan, PlanItem, Run, SubAgent, Tokens } from '../types'
 
 type Status = Run['status']
 
-const PANE = 'spark-progress'
+const PANE = 'pixel-hud'
 
 // 8-bit palette: Claude coral on a warm, dark arcade panel.
 const CORAL = '#D97757'
@@ -20,11 +20,11 @@ const GOOD = '#7FC8A9'
 const WARN = '#E8B25A'
 const BAD = '#E06C5A'
 
-const runAtom = atom({ plugin: 'spark-progress', key: 'run' } as const, null)
-const agentsAtom = atom({ plugin: 'spark-progress', key: 'agents' } as const, [])
-const costAtom = atom({ plugin: 'spark-progress', key: 'costUsd' } as const, 0)
-const nowAtom = atom({ plugin: 'spark-progress', key: 'now' } as const, 0)
-const limitsAtom = atom({ plugin: 'spark-progress', key: 'limits' } as const, [])
+const runAtom = atom({ plugin: 'pixel-hud', key: 'run' } as const, null)
+const agentsAtom = atom({ plugin: 'pixel-hud', key: 'agents' } as const, [])
+const costAtom = atom({ plugin: 'pixel-hud', key: 'costUsd' } as const, 0)
+const nowAtom = atom({ plugin: 'pixel-hud', key: 'now' } as const, 0)
+const limitsAtom = atom({ plugin: 'pixel-hud', key: 'limits' } as const, [])
 
 const zero = (): Tokens => ({ input: 0, output: 0, cacheRead: 0, cacheWrite: 0 })
 
@@ -135,58 +135,63 @@ const refreshUsage = async ($: EngineInterface) => {
 
 // --- 8-bit drawing kit (SVG for the desktop, editor and mobile) --------------
 
-// A 3x5 pixel font: each glyph is five rows of three bits.
+// A 5x7 pixel font in the style of 8-bit computers and LCD panels: each glyph
+// is seven rows (nine for a letter with a descender), each row five bits
+// written as two hex digits.
 const FONT: Record<string, string> = {
-  A: '010101111101101', B: '110101110101110', C: '011100100100011', D: '110101101101110',
-  E: '111100110100111', F: '111100110100100', G: '011100101101011', H: '101101111101101',
-  I: '111010010010111', J: '001001001101010', K: '101101110101101', L: '100100100100111',
-  M: '101111111101101', N: '110101101101101', O: '010101101101010', P: '110101110100100',
-  Q: '010101101110011', R: '110101110101101', S: '011100010001110', T: '111010010010010',
-  U: '101101101101111', V: '101101101101010', W: '101101111111101', X: '101101010101101',
-  Y: '101101010010010', Z: '111001010100111',
-  '0': '111101101101111', '1': '010110010010111', '2': '110001010100111', '3': '110001010001110',
-  '4': '101101111001001', '5': '111100110001110', '6': '011100111101111', '7': '111001010010010',
-  '8': '111101111101111', '9': '111101111001110',
-  ' ': '000000000000000', '.': '000000000000010', ',': '000000000010100', ':': '000010000010000',
-  $: '011110010011110', '%': '101001010100101', '/': '001001010100100', '-': '000000111000000',
-  '!': '010010010000010', '?': '110001010000010', '(': '010100100100010', ')': '010001001001010',
-  '+': '000010111010000', '>': '100010001010100', _: '000000000000111', '~': '000000011110000',
-  '#': '101111101111101', '·': '000000010000000', '…': '000000000000101', "'": '010010000000000',
+  A: '0E1111 1F1111 11', B: '1E1111 1E1111 1E', C: '0E1110 101011 0E', D: '1C1211 111112 1C',
+  E: '1F1010 1E1010 1F', F: '1F1010 1E1010 10', G: '0E1110 171111 0F', H: '111111 1F1111 11',
+  I: '0E0404 040404 0E', J: '070202 020212 0C', K: '111214 181412 11', L: '101010 101010 1F',
+  M: '111B15 151111 11', N: '111119 151311 11', O: '0E1111 111111 0E', P: '1E1111 1E1010 10',
+  Q: '0E1111 111512 0D', R: '1E1111 1E1412 11', S: '0F1010 0E0101 1E', T: '1F0404 040404 04',
+  U: '111111 111111 0E', V: '111111 11110A 04', W: '111111 151515 0A', X: '11110A 040A11 11',
+  Y: '111111 0A0404 04', Z: '1F0102 040810 1F',
+  a: '00000E 010F11 0F', b: '101016 191111 1E', c: '00000E 101011 0E', d: '01010D 131111 0F',
+  e: '00000E 111F10 0E', f: '060908 1C0808 08', g: '00000F 11110F 01010E', h: '101016 191111 11',
+  i: '04000C 040404 0E', j: '020006 020202 02120C', k: '101012 141814 12', l: '0C0404 040404 0E',
+  m: '00001A 151511 11', n: '000016 191111 11', o: '00000E 111111 0E', p: '00001E 11111E 101010',
+  q: '00000F 11110F 010101', r: '000016 191010 10', s: '00000E 100E01 1E', t: '08081C 080809 06',
+  u: '000011 111113 0D', v: '000011 11110A 04', w: '000011 111515 0A', x: '000011 0A040A 11',
+  y: '000011 11110F 01010E', z: '00001F 020408 1F',
+  '0': '0E1113 151911 0E', '1': '040C04 040404 0E', '2': '0E1101 020408 1F', '3': '1F0204 020111 0E',
+  '4': '02060A 121F02 02', '5': '1F101E 010111 0E', '6': '060810 1E1111 0E', '7': '1F0102 040808 08',
+  '8': '0E1111 0E1111 0E', '9': '0E1111 0F0102 0C',
+  '.': '000000 00000C 0C', ',': '000000 000C04 08', ':': '000C0C 000C0C 00', ';': '000C0C 000C04 08',
+  '!': '040404 040400 04', '?': '0E1101 020400 04', $: '040F14 0E051E 04', '%': '181902 040813 03',
+  '/': '000102 040810 00', '-': '000000 1F0000 00', '+': '000404 1F0404 00', '(': '020408 080804 02',
+  ')': '080402 020204 08', "'": '0C0408 000000 00', '"': '0A0A0A 000000 00', '~': '000008 150200 00',
+  '#': '0A0A1F 0A1F0A 0A', '*': '000415 0E1504 00', '=': '00001F 001F00 00', _: '000000 000000 1F',
+  '>': '080402 010204 08', '<': '020408 100804 02', '&': '0C1214 081512 0D', '@': '0E1101 0D1515 0E',
+  '[': '0E0808 080808 0E', ']': '0E0202 020202 0E', '·': '000000 040000 00', '…': '000000 000000 15',
+  '|': '040404 040404 04', '`': '080400 000000 00',
 }
 
-const px = (x: number, y: number, s: number) => `M${x} ${y}h${s}v${s}h-${s}z`
+const GLYPH_W = 5
+/** Pixels from one character to the next: the glyph and one column of space. */
+const ADVANCE = GLYPH_W + 1
 
-/** Text in the pixel font; `scale` is the size of one font pixel. */
-const pixelText = (text: string, x: number, y: number, scale: number, fill: string) => {
+const esc = (s: string) =>
+  s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;')
+
+const px = (x: number, y: number) => `M${x} ${y}h1v1h-1z`
+
+const glyphPath = (ch: string) => {
+  const rows = FONT[ch]!.replace(/ /g, '')
   let d = ''
-  let cx = x
-  for (const ch of text.toUpperCase().replace(/≈/g, '~')) {
-    const glyph = FONT[ch] ?? FONT['?']!
-    for (let i = 0; i < 15; i++) {
-      if (glyph[i] === '1') d += px(cx + (i % 3) * scale, y + Math.floor(i / 3) * scale, scale)
-    }
-    cx += 4 * scale
+  for (let r = 0; r < rows.length / 2; r++) {
+    const bits = parseInt(rows.slice(r * 2, r * 2 + 2), 16)
+    for (let c = 0; c < GLYPH_W; c++) if (bits & (1 << (GLYPH_W - 1 - c))) d += px(c, r)
   }
-  return d ? `<path fill="${fill}" d="${d}"/>` : ''
+  return d
 }
 
-const textWidth = (text: string, scale: number) => text.length * 4 * scale - scale
+const normText = (t: string) => t.replace(/≈/g, '~').replace(/[—–]/g, '-').replace(/[‘’]/g, "'").replace(/[“”]/g, '"')
 
-/** A sprite from rows of characters, each mapped to a colour ('.' is clear). */
-const sprite = (rows: string[], x: number, y: number, s: number, colors: Record<string, string>) => {
-  const paths: Record<string, string> = {}
-  rows.forEach((row, r) => {
-    for (let c = 0; c < row.length; c++) {
-      const color = colors[row[c]!]
-      if (color) paths[color] = (paths[color] ?? '') + px(x + c * s, y + r * s, s)
-    }
-  })
-  return Object.entries(paths)
-    .map(([fill, d]) => `<path fill="${fill}" d="${d}"/>`)
-    .join('')
-}
+const textWidth = (text: string, scale: number) => normText(text).length * ADVANCE * scale - scale
 
-// The mascot: a little coral critter, 16 by 9 pixels, with two walk frames.
+type Mood = 'walkA' | 'walkB' | 'happy' | 'sad' | 'sleep'
+
+// The mascot: a little coral critter, 16 by 9 pixels.
 const BODY = [
   '..hhhhhhhhhhhh..',
   '..bbbbbbbbbbbb..',
@@ -196,240 +201,332 @@ const BODY = [
   'bbbbbbbbbbbbbbbb',
   '..llllllllllll..',
 ]
-const EYES_SHUT = ['..bbbbbbbbbbbb..', '..bbeebbbbeebb..']
-const EYES_HAPPY = ['..bbeebbbbeebb..', '..bebbebbebbeb..']
+const EYES: Partial<Record<Mood, string[]>> = {
+  sleep: ['..bbbbbbbbbbbb..', '..bbeebbbbeebb..'],
+  happy: ['..bbeebbbbeebb..', '..bebbebbebbeb..'],
+}
 const LEGS_A = ['..b.b......b.b..', '..b.b......b.b..']
 const LEGS_B = ['...b.b....b.b...', '...b.b....b.b...']
 
-type Mood = 'walk' | 'happy' | 'sad' | 'sleep'
-
-const mascotColors = (mood: Mood) => ({
-  h: mood === 'sad' ? MUTED : CORAL_HI,
-  b: mood === 'sad' ? '#8A6F62' : CORAL,
-  l: mood === 'sad' ? '#6A5248' : CORAL_LO,
-  e: INK,
-})
-
-const mascotRows = (mood: Mood, legs: string[]) => {
+const mascotRows = (mood: Mood) => {
   const body = [...BODY]
-  if (mood === 'sleep') body.splice(2, 2, ...EYES_SHUT)
-  if (mood === 'happy') body.splice(2, 2, ...EYES_HAPPY)
-  return [...body, ...legs]
+  const eyes = EYES[mood]
+  if (eyes) body.splice(2, 2, ...eyes)
+  return [...body, ...(mood === 'walkB' ? LEGS_B : LEGS_A)]
 }
 
-/** The mascot at (x, y), animated by its mood; `s` is its pixel size. */
-const mascot = (x: number, y: number, s: number, mood: Mood) => {
-  const colors = mascotColors(mood)
-  if (mood === 'walk') {
-    const a = sprite(mascotRows(mood, LEGS_A), x, y, s, colors)
-    const b = sprite(mascotRows(mood, LEGS_B), x, y, s, colors)
+const mascotColors = (mood: Mood): Record<string, string> =>
+  mood === 'sad'
+    ? { h: MUTED, b: '#8A6F62', l: '#6A5248', e: INK }
+    : { h: CORAL_HI, b: CORAL, l: CORAL_LO, e: INK }
+
+/**
+ * One SVG document under construction: glyphs and sprites are defined once in
+ * <defs> and placed with <use>, which keeps the markup small.
+ */
+class Pix {
+  private glyphs = new Set<string>()
+  private sprites = new Map<string, string>()
+
+  /** Pixel-font text; `scale` is the size of one font pixel. */
+  text(text: string, x: number, y: number, scale: number, fill: string) {
+    let out = `<g transform="translate(${x} ${y}) scale(${scale})" fill="${fill}">`
+    ;[...normText(text)].forEach((ch, i) => {
+      if (!FONT[ch]) return
+      this.glyphs.add(ch)
+      out += `<use href="#g${ch.codePointAt(0)}" x="${i * ADVANCE}"/>`
+    })
+    return `${out}</g>`
+  }
+
+  /** A sprite from rows of characters, each mapped to a colour ('.' is clear). */
+  sprite(id: string, rows: string[], colors: Record<string, string>, x: number, y: number, s: number) {
+    if (!this.sprites.has(id)) {
+      const paths: Record<string, string> = {}
+      rows.forEach((row, r) => {
+        for (let c = 0; c < row.length; c++) {
+          const color = colors[row[c]!]
+          if (color) paths[color] = (paths[color] ?? '') + px(c, r)
+        }
+      })
+      const body = Object.entries(paths).map(([fill, d]) => `<path fill="${fill}" d="${d}"/>`).join('')
+      this.sprites.set(id, `<g id="${id}">${body}</g>`)
+    }
+    return `<use href="#${id}" transform="translate(${x} ${y}) scale(${s})"/>`
+  }
+
+  mascot(mood: Mood, x: number, y: number, s: number) {
+    return this.sprite(`m-${mood}`, mascotRows(mood), mascotColors(mood), x, y, s)
+  }
+
+  /** The mascot walking in place: two frames, a bob, legs swapping. */
+  walker(x: number, y: number, s: number) {
     return `<g><animateTransform attributeName="transform" type="translate" values="0 0;0 -${s};0 0" dur=".5s" calcMode="discrete" repeatCount="indefinite"/>
-      <g>${a}<animate attributeName="opacity" values="1;0" dur=".5s" calcMode="discrete" repeatCount="indefinite"/></g>
-      <g opacity="0">${b}<animate attributeName="opacity" values="0;1" dur=".5s" calcMode="discrete" repeatCount="indefinite"/></g></g>`
+      <g>${this.mascot('walkA', x, y, s)}<animate attributeName="opacity" values="1;0" dur=".5s" calcMode="discrete" repeatCount="indefinite"/></g>
+      <g opacity="0">${this.mascot('walkB', x, y, s)}<animate attributeName="opacity" values="0;1" dur=".5s" calcMode="discrete" repeatCount="indefinite"/></g></g>`
   }
-  const still = sprite(mascotRows(mood, LEGS_A), x, y, s, colors)
-  if (mood === 'happy') {
-    return `<g><animateTransform attributeName="transform" type="translate" values="0 0;0 -${s * 3};0 0;0 0" dur="1s" calcMode="discrete" repeatCount="indefinite"/>${still}</g>`
+
+  sparkle(x: number, y: number, s: number, color: string, delay: number) {
+    const id = `sp-${color.slice(1)}`
+    return `<g opacity="0">${this.sprite(id, ['.x.', 'xxx', '.x.'], { x: color }, x, y, s)}<animate attributeName="opacity" values="0;1;0" dur="1.4s" begin="${delay}s" calcMode="discrete" repeatCount="indefinite"/></g>`
   }
-  if (mood === 'sleep') {
-    return `<g><animateTransform attributeName="transform" type="translate" values="0 0;0 ${s};0 0" dur="2s" calcMode="discrete" repeatCount="indefinite"/>${still}</g>`
+
+  svg(w: number, h: number, body: string) {
+    const glyphs = [...this.glyphs].map(ch => `<path id="g${ch.codePointAt(0)}" d="${glyphPath(ch)}"/>`).join('')
+    return `<svg xmlns="http://www.w3.org/2000/svg" width="${w}" height="${h}" viewBox="0 0 ${w} ${h}" shape-rendering="crispEdges"><defs>${glyphs}${[...this.sprites.values()].join('')}</defs>${body}</svg>`
   }
-  return still
 }
 
-/** A four-point pixel sparkle that twinkles. */
-const sparkle = (x: number, y: number, s: number, color: string, delay: number) =>
-  `<g opacity="0">${sprite(['.x.', 'xxx', '.x.'], x, y, s, { x: color })}<animate attributeName="opacity" values="0;1;0" dur="1.4s" begin="${delay}s" calcMode="discrete" repeatCount="indefinite"/></g>`
+// Drawn at about the pane's own width, so a font pixel is a screen pixel or
+// more: SMALL for fine print, BODY for text, BIG for titles and numbers.
+const W = 340
+const GAP = 10
+const PAD = 12
+const T_BODY = 2
+const T_BIG = 3
+const T_HUGE = 4
 
-/** A dark arcade panel with a chunky two-tone pixel border. */
-const frame = (w: number, h: number, accent: string) =>
-  `<rect x="0" y="0" width="${w}" height="${h}" fill="${PANEL}"/>
-   <path fill="${accent}" d="M3 0h${w - 6}v3h-${w - 6}zM3 ${h - 3}h${w - 6}v3h-${w - 6}zM0 3h3v${h - 6}h-3zM${w - 3} 3h3v${h - 6}h-3z"/>
-   <path fill="${PANEL_HI}" d="M6 6h${w - 12}v2h-${w - 12}zM6 ${h - 8}h${w - 12}v2h-${w - 12}z"/>`
+/** Characters of T_BODY text that fit across a panel from `x`. */
+const fits = (x: number, scale = T_BODY) => Math.floor((W - PAD - x + scale) / (ADVANCE * scale))
 
-const svg = (w: number, h: number, body: string) =>
-  `<svg xmlns="http://www.w3.org/2000/svg" width="${w}" height="${h}" viewBox="0 0 ${w} ${h}" shape-rendering="crispEdges">${body}</svg>`
+/** A dark arcade panel with a chunky pixel border and a title row. */
+const panel = (p: Pix, y: number, h: number, accent: string, title?: string, right?: string) => {
+  let out = `<rect x="0" y="${y}" width="${W}" height="${h}" fill="${PANEL}"/>
+   <path fill="${accent}" d="M3 ${y}h${W - 6}v3h-${W - 6}zM3 ${y + h - 3}h${W - 6}v3h-${W - 6}zM0 ${y + 3}h3v${h - 6}h-3zM${W - 3} ${y + 3}h3v${h - 6}h-3z"/>`
+  if (title) out += p.text(title, PAD, y + PAD, T_BIG, accent)
+  if (right) out += p.text(right, W - PAD - textWidth(right, T_BODY), y + PAD + 3, T_BODY, CREAM)
+  return out
+}
 
-/** A segmented progress bar; a null `pct` sweeps a lit block back and forth. */
+/** A segmented bar; a null `pct` sweeps a lit block back and forth. */
 const segBar = (x: number, y: number, w: number, h: number, segs: number, pct: number | null, color: string) => {
   const gap = 2
   const sw = (w - gap * (segs - 1)) / segs
-  const lit = pct === null ? 0 : Math.round(Math.min(1, pct) * segs)
-  let out = ''
+  const lit = pct === null ? 0 : Math.round(Math.min(1, Math.max(0, pct)) * segs)
+  let out = `<rect x="${x - 2}" y="${y - 2}" width="${w + 4}" height="${h + 4}" fill="${INK}"/>`
   for (let i = 0; i < segs; i++) {
     const sx = (x + i * (sw + gap)).toFixed(1)
     const isLit = i < lit
     out += `<rect x="${sx}" y="${y}" width="${sw.toFixed(1)}" height="${h}" fill="${isLit ? color : PANEL_HI}"/>`
-    if (isLit) out += `<rect x="${sx}" y="${y}" width="${sw.toFixed(1)}" height="2" fill="#FFFFFF" fill-opacity=".35"/>`
+    if (isLit) out += `<rect x="${sx}" y="${y}" width="${sw.toFixed(1)}" height="3" fill="#FFFFFF" fill-opacity=".3"/>`
   }
   if (pct === null) {
-    const blockW = sw * 3 + gap * 2
-    out += `<rect x="${x}" y="${y}" width="${blockW.toFixed(1)}" height="${h}" fill="${color}">
-      <animate attributeName="x" values="${x};${(x + w - blockW).toFixed(1)};${x}" dur="2.4s" repeatCount="indefinite"/></rect>`
+    const bw = sw * 3 + gap * 2
+    out += `<rect x="${x}" y="${y}" width="${bw.toFixed(1)}" height="${h}" fill="${color}"><animate attributeName="x" values="${x};${(x + w - bw).toFixed(1)};${x}" dur="2.4s" repeatCount="indefinite"/></rect>`
   }
   return out
 }
 
-const STARS: [number, number][] = [[24, 34], [70, 44], [130, 32], [196, 42], [250, 30], [312, 40], [340, 56], [96, 60]]
-
-/** The main scene: title, percent, the mascot walking along the track. */
-const sceneSvg = (pct: number | null, status: Status | 'idle', title: string) => {
-  const W = 360
-  const H = 128
-  const S = 3
-  const trackX = 18
-  const trackW = W - 36
-  const trackY = 100
-  const mw = 16 * S
-  const mh = 9 * S
-  const isRunning = status === 'running'
-  const accent = status === 'error' ? BAD : status === 'stopped' ? MUTED : CORAL
-  const stars = STARS.map(([x, y], i) => sparkle(x, y, 2, i % 2 ? CREAM : CORAL_HI, i * 0.35)).join('')
-  const pctText = status === 'idle' ? '' : pct === null ? '...' : `${Math.round(pct * 100)}%`
-  const groundY = trackY - mh - 4
-
-  let hero: string
-  if (status === 'idle') {
-    const x = (W - mw) / 2
-    const zs = [0, 1, 2]
-      .map(i => `<g opacity="0">${pixelText('z', x + mw + 4 + i * 10, groundY - 4 - i * 8, 2 + i, CREAM)}<animate attributeName="opacity" values="0;1;1;0" dur="2.4s" begin="${i * 0.6}s" repeatCount="indefinite"/></g>`)
-      .join('')
-    hero = mascot(x, groundY, S, 'sleep') + zs
-  } else if (isRunning && pct === null) {
-    hero = `<g>${mascot(trackX, groundY, S, 'walk')}<animateTransform attributeName="transform" type="translate" values="0 0;${trackW - mw} 0;0 0" dur="6s" repeatCount="indefinite" additive="sum"/></g>`
-  } else if (isRunning) {
-    hero = mascot(trackX + (pct ?? 0) * (trackW - mw), groundY, S, 'walk')
-  } else {
-    const x = trackX + trackW - mw - 14
-    const mood: Mood = status === 'done' ? 'happy' : 'sad'
-    const fireworks =
-      status === 'done'
-        ? [sparkle(x - 18, groundY - 10, 3, CORAL_HI, 0), sparkle(x + mw + 4, groundY - 16, 3, CREAM, 0.4), sparkle(x - 36, groundY + 4, 2, GOOD, 0.8)].join('')
-        : ''
-    hero = mascot(x, groundY, S, mood) + fireworks
-  }
-
-  const flag = sprite(['f...', 'ffff', 'fff.', 'ff..', 'f...', 'f...', 'f...', 'f...'], trackX + trackW - 10, trackY - 26, 3, { f: CREAM })
-
-  return svg(
-    W,
-    H,
-    `${frame(W, H, accent)}${stars}
-     ${pixelText(clip(title, 22), 16, 16, 3, accent)}
-     ${pctText ? pixelText(pctText, W - 16 - textWidth(pctText, 3), 16, 3, CREAM) : ''}
-     ${status === 'idle' ? '' : flag}
-     ${hero}
-     <rect x="${trackX - 2}" y="${trackY - 2}" width="${trackW + 4}" height="18" fill="${INK}"/>
-     ${segBar(trackX, trackY, trackW, 14, 24, status === 'idle' ? 0 : pct, accent)}`,
-  )
-}
-
-/** The stats HUD: six pixel boxes. */
-const hudSvg = (stats: [string, string][]) => {
-  const W = 360
-  const cols = 3
-  const bw = 116
-  const bh = 42
-  const gap = 6
-  const rows = Math.ceil(stats.length / cols)
-  const H = rows * bh + (rows - 1) * gap
-  const boxes = stats
-    .map(([k, v], i) => {
-      const x = (i % cols) * (bw + gap)
-      const y = Math.floor(i / cols) * (bh + gap)
-      const scale = textWidth(v, 3) <= bw - 16 ? 3 : 2
-      return `<rect x="${x}" y="${y}" width="${bw}" height="${bh}" fill="${PANEL}"/>
-        <path fill="${PANEL_HI}" d="M${x} ${y}h${bw}v2h-${bw}zM${x} ${y + bh - 2}h${bw}v2h-${bw}zM${x} ${y}h2v${bh}h-2zM${x + bw - 2} ${y}h2v${bh}h-2z"/>
-        <rect x="${x + 2}" y="${y + 2}" width="4" height="4" fill="${CORAL}"/>
-        ${pixelText(k, x + 10, y + 7, 2, MUTED)}
-        ${pixelText(v, x + 8, y + 21, scale, CREAM)}`
-    })
-    .join('')
-  return svg(W, H, boxes)
-}
-
 const limitName = (kind: string) =>
-  kind === 'five_hour' ? 'SESSION (5H)' : kind === 'seven_day' ? 'THIS WEEK' : kind === 'spend_limit' ? 'SPEND LIMIT' : kind.replace(/_/g, ' ')
+  kind === 'five_hour' ? 'SESSION' : kind === 'seven_day' ? 'WEEK' : kind === 'spend_limit' ? 'SPEND' : kind.replace(/_/g, ' ')
 
 const meterColor = (pct: number) => (pct >= 90 ? BAD : pct >= 70 ? WARN : GOOD)
 
-/** Plan usage as 8-bit energy meters, with the session's spend on top. */
-const usageSvg = (limits: Limit[], sessionUsd: number, now: number) => {
-  const W = 360
-  const rowH = 40
-  const top = 34
-  const H = top + Math.max(1, limits.length) * rowH + 8
-  const heart = sprite(['.x.x.', 'xxxxx', 'xxxxx', '.xxx.', '..x..'], 14, 12, 3, { x: CORAL })
-  let rows = ''
-  if (limits.length === 0) {
-    rows = pixelText('NO PLAN LIMITS REPORTED YET', 16, top + 12, 2, MUTED)
+/** Text broken into at most `lines` lines of `perLine` characters. */
+const wrap = (text: string, perLine: number, lines: number) => {
+  const words = normText(text).replace(/\s+/g, ' ').trim().split(' ')
+  const out: string[] = []
+  let line = ''
+  let used = 0
+  for (const word of words) {
+    const next = line ? `${line} ${word}` : word
+    if (next.length <= perLine) {
+      line = next
+      used++
+      continue
+    }
+    if (line) out.push(line)
+    if (out.length === lines) break
+    line = word.slice(0, perLine)
+    used++
   }
-  limits.forEach((l, i) => {
-    const y = top + i * rowH
+  if (out.length < lines && line) out.push(line)
+  if (used < words.length || out.join(' ').length < words.join(' ').length) {
+    out[out.length - 1] = clip(`${out[out.length - 1]!}…`.slice(0, perLine + 1), perLine)
+  }
+  return out
+}
+
+type SceneState = {
+  status: Status | 'idle'
+  pct: number | null
+  title: string
+  prompt: string
+  limits: Limit[]
+  sessionUsd: number
+  now: number
+}
+
+/**
+ * The top screen, animated: the usage meters as a game's energy bars, then
+ * the play area where the mascot walks the task's progress track to the flag.
+ * It holds no ticking clock, so it redraws only when progress or usage moves.
+ */
+const topScreen = (s: SceneState) => {
+  const p = new Pix()
+  let body = ''
+  let y = 0
+
+  // Energy bars: the plan's usage windows and the session's spend.
+  const meterH = 44
+  const uh = 42 + Math.max(1, s.limits.length) * meterH
+  body += panel(p, y, uh, CORAL, 'USAGE', `SPEND ${fmtUsd(s.sessionUsd)}`)
+  body += p.sprite('heart', ['.x.x.', 'xxxxx', 'xxxxx', '.xxx.', '..x..'], { x: CORAL }, PAD + textWidth('USAGE', T_BIG) + 8, y + PAD + 2, 3)
+  if (s.limits.length === 0) {
+    body += p.text('NO PLAN LIMITS YET', PAD, y + 48, T_BODY, MUTED)
+  }
+  s.limits.forEach((l, i) => {
+    const ry = y + 44 + i * meterH
     const pct = Math.max(0, l.percentUsed)
     const color = meterColor(pct)
+    const resetMs = l.resetsAt ? Date.parse(l.resetsAt) - s.now : NaN
     const pctText = `${Math.round(pct)}%`
-    const resetMs = l.resetsAt ? Date.parse(l.resetsAt) - now : NaN
-    const reset = Number.isFinite(resetMs) ? `RESETS IN ${fmtIn(resetMs)}` : ''
-    rows += `${pixelText(limitName(l.kind), 16, y, 2, CREAM)}
-      ${pixelText(pctText, W - 16 - textWidth(pctText, 2), y, 2, color)}
-      <rect x="14" y="${y + 13}" width="${W - 28}" height="14" fill="${INK}"/>
-      ${segBar(16, y + 15, W - 32, 10, 20, pct / 100, color)}
-      ${reset ? pixelText(reset, 16, y + 30, 1, MUTED) : ''}`
+    body += p.text(limitName(l.kind), PAD, ry, T_BODY, CREAM)
+    body += p.text(pctText, PAD + textWidth(limitName(l.kind), T_BODY) + 10, ry, T_BODY, color)
+    if (Number.isFinite(resetMs)) {
+      const reset = `IN ${fmtIn(resetMs)}`
+      body += p.text(reset, W - PAD - textWidth(reset, T_BODY), ry, T_BODY, MUTED)
+    }
+    body += segBar(PAD + 2, ry + 21, W - 2 * PAD - 4, 12, 16, pct / 100, color)
   })
-  const spend = `SESSION SPEND ${fmtUsd(sessionUsd)}`
-  return svg(
-    W,
-    H,
-    `${frame(W, H, CORAL)}${heart}
-     ${pixelText('USAGE', 34, 13, 3, CORAL)}
-     ${pixelText(spend, W - 16 - textWidth(spend, 2), 15, 2, CREAM)}
-     ${rows}`,
-  )
+  y += uh + GAP
+
+  // Play area.
+  const promptLines = wrap(s.prompt, fits(PAD), 2)
+  const H = 64 + promptLines.length * 20 + 76
+  const accent = s.status === 'error' ? BAD : s.status === 'stopped' ? MUTED : CORAL
+  body += panel(p, y, H, accent)
+  body += p.text(clip(s.title, 12), PAD, y + PAD + 2, T_BIG, accent)
+  const pctText = s.status === 'idle' ? '' : s.pct === null ? '...' : `${Math.round(s.pct * 100)}%`
+  if (pctText) body += p.text(pctText, W - PAD - textWidth(pctText, T_BIG), y + PAD + 2, T_BIG, CREAM)
+  promptLines.forEach((line, i) => {
+    body += p.text(line, PAD, y + 48 + i * 20, T_BODY, MUTED)
+  })
+
+  const S = 4
+  const trackX = PAD + 4
+  const trackW = W - 2 * trackX
+  const trackY = y + H - 28
+  const mw = 16 * S
+  const groundY = trackY - 9 * S - 6
+  const stars: [number, number][] = [[24, -50], [92, -66], [170, -46], [236, -62], [300, -40], [130, -30]]
+  body += stars.map(([sx, sy], i) => p.sparkle(sx, groundY + sy + 30, 2, i % 2 ? CREAM : CORAL_HI, i * 0.35)).join('')
+  if (s.status === 'idle') {
+    const x = (W - mw) / 2
+    body += `<g><animateTransform attributeName="transform" type="translate" values="0 0;0 ${S};0 0" dur="2s" calcMode="discrete" repeatCount="indefinite"/>${p.mascot('sleep', x, groundY, S)}</g>`
+    body += [0, 1, 2]
+      .map(i => `<g opacity="0">${p.text('z', x + mw + 6 + i * 12, groundY - 2 - i * 11, 1 + i, CREAM)}<animate attributeName="opacity" values="0;1;1;0" dur="2.4s" begin="${i * 0.6}s" repeatCount="indefinite"/></g>`)
+      .join('')
+  } else {
+    body += p.sprite('flag', ['f...', 'ffff', 'fff.', 'ff..', 'f...', 'f...', 'f...', 'f...'], { f: CREAM }, trackX + trackW - 12, trackY - 38, 4)
+    const span = trackW - mw - 20
+    if (s.status === 'running' && s.pct === null) {
+      body += `<g>${p.walker(trackX, groundY, S)}<animateTransform attributeName="transform" type="translate" values="0 0;${span} 0;0 0" dur="6s" repeatCount="indefinite" additive="sum"/></g>`
+    } else if (s.status === 'running') {
+      body += p.walker(trackX + (s.pct ?? 0) * span, groundY, S)
+    } else {
+      const x = trackX + span
+      if (s.status === 'done') {
+        body += `<g><animateTransform attributeName="transform" type="translate" values="0 0;0 -${S * 3};0 0;0 0" dur="1s" calcMode="discrete" repeatCount="indefinite"/>${p.mascot('happy', x, groundY, S)}</g>`
+        body += p.sparkle(x - 22, groundY - 12, 4, CORAL_HI, 0) + p.sparkle(x - 48, groundY + 8, 3, GOOD, 0.8)
+      } else {
+        body += p.mascot('sad', x, groundY, S)
+      }
+    }
+  }
+  body += segBar(trackX, trackY, trackW, 14, 16, s.status === 'idle' ? 0 : s.pct, accent)
+  y += H
+
+  return { source: p.svg(W, y, body), height: y }
 }
 
-/** The plan as a pixel checklist. */
-const planSvg = (items: PlanItem[]) => {
-  const W = 360
-  const rowH = 18
-  const H = items.length * rowH + 8
-  const rows = items
-    .map((item, i) => {
-      const y = 4 + i * rowH
+type BottomState = {
+  stats: { label: string; value: string; tip: string }[]
+  plan?: Plan
+  agents: { a: SubAgent; time: string; detail: string }[]
+  frame: number
+}
+
+/**
+ * The lower screen, redrawn every second: stats, the quest log and the party.
+ * Animation here comes from those redraws (the second's parity), not SMIL.
+ */
+const bottomScreen = (s: BottomState) => {
+  const p = new Pix()
+  let body = ''
+  let y = 0
+
+  // Stats: a 2 by 3 grid of pixel boxes.
+  const cols = 2
+  const bw = (W - GAP) / cols
+  const bh = 64
+  s.stats.forEach((st, i) => {
+    const x = (i % cols) * (bw + GAP)
+    const by = y + Math.floor(i / cols) * (bh + GAP)
+    const scale = textWidth(st.value, T_HUGE) <= bw - 24 ? T_HUGE : T_BIG
+    body += `<g><title>${esc(st.tip)}</title><rect x="${x}" y="${by}" width="${bw}" height="${bh}" fill="${PANEL}"/>
+      <path fill="${PANEL_HI}" d="M${x} ${by}h${bw}v3h-${bw}zM${x} ${by + bh - 3}h${bw}v3h-${bw}zM${x} ${by}h3v${bh}h-3zM${x + bw - 3} ${by}h3v${bh}h-3z"/>
+      <rect x="${x + 3}" y="${by + 3}" width="6" height="6" fill="${CORAL}"/>
+      ${p.text(st.label, x + 14, by + 12, T_BODY, MUTED)}${p.text(st.value, x + 14, by + 30 + (T_HUGE - scale) * 4, scale, CREAM)}</g>`
+  })
+  y += Math.ceil(s.stats.length / cols) * (bh + GAP)
+
+  // Quest log: the task list, each item wrapping to two lines.
+  if (s.plan && s.plan.items.length > 0) {
+    const items = s.plan.items.slice(0, 10)
+    const done = s.plan.items.filter(i => i.status === 'completed').length
+    const textX = PAD + 24
+    const rows = items.map(item => wrap(item.content, fits(textX), 2))
+    const h = 46 + rows.reduce((n, r) => n + r.length * 20 + 6, 0)
+    body += panel(p, y, h, CORAL, 'QUESTS', `${done}/${s.plan.items.length}`)
+    let iy = y + 46
+    items.forEach((item, i) => {
       const color = item.status === 'completed' ? MUTED : item.status === 'in_progress' ? CORAL : CREAM
-      const box =
-        item.status === 'completed'
-          ? sprite(['xxxxx', 'x...x', 'x..cx', 'xccxx', 'xxxxx'], 6, y + 2, 2, { x: MUTED, c: GOOD })
-          : item.status === 'in_progress'
-            ? `<g>${sprite(['.x.', 'xxx', '.x.'], 6, y + 2, 3, { x: CORAL })}<animate attributeName="opacity" values="1;.3;1" dur="1s" calcMode="discrete" repeatCount="indefinite"/></g>`
-            : sprite(['xxxxx', 'x...x', 'x...x', 'x...x', 'xxxxx'], 6, y + 2, 2, { x: PANEL_HI })
-      return `${box}${pixelText(clip(item.content, 40), 24, y + 2, 2, color)}`
+      if (item.status === 'completed') {
+        body += p.sprite('chk', ['xxxxx', 'x...c', 'xc.cx', 'x.c.x', 'xxxxx'], { x: MUTED, c: GOOD }, PAD, iy, 3)
+      } else if (item.status === 'in_progress') {
+        body += p.sprite(s.frame % 2 ? 'cur-b' : 'cur-a', ['x...', 'xx..', 'xxx.', 'xx..', 'x...'], { x: s.frame % 2 ? CORAL_HI : CORAL }, PAD, iy, 3)
+      } else {
+        body += p.sprite('box', ['xxxxx', 'x...x', 'x...x', 'x...x', 'xxxxx'], { x: PANEL_HI }, PAD, iy, 3)
+      }
+      rows[i]!.forEach((line, li) => {
+        body += p.text(line, textX, iy + li * 20, T_BODY, color)
+      })
+      iy += rows[i]!.length * 20 + 6
     })
-    .join('')
-  return svg(W, H, `<rect width="${W}" height="${H}" fill="${PANEL}"/>${rows}`)
-}
+    y += h + GAP
+  }
 
-/** One subagent: a small mascot, its name, status badge and bar. */
-const agentSvg = (a: SubAgent, idx: number) => {
-  const W = 360
-  const H = 56
-  const isRunning = a.status === 'running'
-  const accent = a.status === 'error' ? BAD : a.status === 'stopped' ? MUTED : CORAL
-  const mood: Mood = isRunning ? 'walk' : a.status === 'done' ? 'happy' : 'sad'
-  const badge = isRunning ? 'RUN' : a.status === 'done' ? 'DONE' : a.status === 'stopped' ? 'STOP' : 'ERR'
-  const badgeColor = isRunning ? CORAL : a.status === 'done' ? GOOD : BAD
-  const bw = textWidth(badge, 2) + 8
-  return svg(
-    W,
-    H,
-    `${frame(W, H, accent)}
-     ${mascot(10, 18, 2, mood)}
-     ${pixelText(`#${idx + 1} ${clip(a.description, 22)}`, 50, 12, 2, CREAM)}
-     ${pixelText(clip(a.type, 18), 50, 26, 2, MUTED)}
-     <rect x="${W - 12 - bw}" y="9" width="${bw}" height="16" fill="${badgeColor}"/>
-     ${pixelText(badge, W - 8 - bw, 12, 2, INK)}
-     ${segBar(50, 40, W - 62, 7, 16, isRunning ? null : 1, accent)}`,
-  )
+  // Party: the subagents.
+  if (s.agents.length > 0) {
+    const shown = s.agents.slice(-6)
+    const rowH = 100
+    const h = 44 + shown.length * rowH
+    const running = s.agents.filter(x => x.a.status === 'running').length
+    body += panel(p, y, h, CORAL, 'PARTY', `${running} ACTIVE`)
+    shown.forEach(({ a, time, detail }, i) => {
+      const ry = y + 44 + i * rowH
+      const isRunning = a.status === 'running'
+      const accent = a.status === 'error' ? BAD : a.status === 'stopped' ? MUTED : CORAL
+      const mood: Mood = isRunning ? (s.frame % 2 ? 'walkB' : 'walkA') : a.status === 'done' ? 'happy' : 'sad'
+      const badge = isRunning ? 'RUN' : a.status === 'done' ? 'DONE' : a.status === 'stopped' ? 'STOP' : 'ERR'
+      const badgeColor = isRunning ? CORAL : a.status === 'done' ? GOOD : BAD
+      const textX = PAD + 58
+      const bdw = textWidth(badge, T_BODY) + 10
+      body += `<rect x="8" y="${ry}" width="${W - 16}" height="${rowH - 8}" fill="${INK}" fill-opacity=".6"/>`
+      body += p.mascot(mood, PAD, ry + 12 - (isRunning && s.frame % 2 ? 3 : 0), 3)
+      body += p.text(clip(a.description, fits(textX)), textX, ry + 8, T_BODY, CREAM)
+      body += `<rect x="${textX}" y="${ry + 28}" width="${bdw}" height="19" fill="${badgeColor}"/>`
+      body += p.text(badge, textX + 5, ry + 30, T_BODY, INK)
+      body += p.text(time, textX + bdw + 10, ry + 30, T_BODY, CREAM)
+      body += p.text(clip(detail, fits(textX)), textX, ry + 54, T_BODY, MUTED)
+      const lit = isRunning ? ((s.frame % 8) + 1) / 9 : 1
+      body += segBar(textX, ry + 76, W - textX - PAD - 4, 10, 12, lit, accent)
+    })
+    y += h + GAP
+  }
+
+  return { source: p.svg(W, y - GAP, body), height: y - GAP }
 }
 
 // Text art for the terminal, which has no Svg.
@@ -456,9 +553,9 @@ export const register: Register = on => {
   on('session.start', async ($, e, next) => {
     await $.command.register({
       name: 'progress',
-      description: 'Show the Claude task progress pane (subagents, tokens, cost, time, usage)',
+      description: 'Show the Pixel HUD: task progress, usage limits, quests and subagents',
     })
-    void $.ui.open({ id: PANE, title: 'Claude progress' })
+    void $.ui.open({ id: PANE, title: 'Pixel HUD' })
     const started = await next(e)
     await update($, nowAtom, () => Date.now())
     await refreshUsage($)
@@ -466,9 +563,9 @@ export const register: Register = on => {
   })
 
   on('command.run', { command: 'progress' }, async $ => {
-    await $.ui.open({ id: PANE, title: 'Claude progress' })
+    await $.ui.open({ id: PANE, title: 'Pixel HUD' })
     await refreshUsage($)
-    return { text: 'Claude progress pane opened.' }
+    return { text: 'Pixel HUD opened.' }
   })
 
   on('session.measure', async ($, e, next) => {
@@ -529,12 +626,14 @@ export const register: Register = on => {
       await update($, runAtom, run => {
         if (!run) return run
         const isPlan = name === 'TodoWrite' || name.endsWith('__update_plan')
-        return {
-          ...run,
-          tools: run.tools + 1,
-          lastTool: isPlan ? run.lastTool : name,
-          plan: isPlan ? applyPlanCall(run.plan, args) : run.plan,
-        }
+        // The desktop app's wrap-up checks off the whole task list.
+        const isWrapUp = name.endsWith('__wrap_up')
+        const plan = isPlan
+          ? applyPlanCall(run.plan, args)
+          : isWrapUp && run.plan
+            ? { items: run.plan.items.map(i => ({ ...i, status: 'completed' as const })) }
+            : run.plan
+        return { ...run, tools: run.tools + 1, lastTool: isPlan || isWrapUp ? run.lastTool : name, plan }
       })
     } else {
       const id = e.agentId
@@ -605,160 +704,141 @@ export const register: Register = on => {
     const limits = await read($, limitsAtom)
     const now = await read($, nowAtom)
     const frame = Math.floor(now / 1000)
-    const width = Math.max(10, Math.min(40, (e.viewport?.columns ?? 50) - 14))
-    const termMascot = (moving: boolean) => (
-      <Box flexDirection="column">
-        {(moving && frame % 2 ? TERM_MASCOT_STEP : TERM_MASCOT).map(line => (
-          <Text color="claude">{line}</Text>
-        ))}
-      </Box>
-    )
 
-    const usageView = Svg ? (
-      <Svg
-        source={usageSvg(limits, costUsd, now)}
-        alt={`Usage: session spend ${fmtUsd(costUsd)}; ${limits.map(l => `${limitName(l.kind)} ${Math.round(l.percentUsed)}%`).join(', ') || 'no plan limits reported'}`}
-      />
-    ) : (
-      <Box flexDirection="column">
-        <Text weight="semibold" color="claude">♥ Usage · session spend {fmtUsd(costUsd)}</Text>
-        {limits.length === 0 && <Text dimColor>No plan limits reported yet.</Text>}
-        {limits.map(l => {
-          const resetMs = l.resetsAt ? Date.parse(l.resetsAt) - now : NaN
-          return (
-            <Text>
-              {limitName(l.kind).padEnd(13)} <Text color={l.percentUsed >= 90 ? 'error' : l.percentUsed >= 70 ? 'warning' : 'success'}>{textBar(l.percentUsed / 100, Math.min(20, width), 0)}</Text> {Math.round(l.percentUsed)}%
-              {Number.isFinite(resetMs) ? <Text dimColor> · resets in {fmtIn(resetMs).toLowerCase()}</Text> : ''}
-            </Text>
-          )
-        })}
-      </Box>
-    )
+    const status: Status | 'idle' = run?.status ?? 'idle'
+    const pct = run ? progressOf(run, agents) : 0
+    const title = !run
+      ? 'READY'
+      : run.status === 'running'
+        ? 'WORKING'
+        : run.status === 'done'
+          ? 'TASK CLEAR!'
+          : run.status === 'stopped'
+            ? 'STOPPED'
+            : 'GAME OVER'
+    const prompt = run ? run.prompt || '(continuing)' : 'Send a prompt to start a quest'
+    const elapsed = run ? (run.endedAt ?? now) - run.startedAt : 0
+    const runCost = run ? Math.max(0, costUsd - run.costAtStart) : 0
+    const mainTokens = run?.tokens ?? zero()
+    const allTokens = agents.reduce((n, a) => n + totalTokens(a.tokens), totalTokens(mainTokens))
+    const allWeight = agents.reduce((n, a) => n + weight(a.tokens), weight(mainTokens)) || 1
+    const stats = [
+      { label: 'TIME', value: fmtTime(elapsed), tip: 'Time this task has taken' },
+      { label: 'COST', value: fmtUsd(runCost), tip: "This task's real spend: the session's cost since the prompt" },
+      {
+        label: 'TOKENS',
+        value: fmtTokens(allTokens),
+        tip: `Main: in ${fmtTokens(mainTokens.input)}, out ${fmtTokens(mainTokens.output)}, cache read ${fmtTokens(mainTokens.cacheRead)}, cache write ${fmtTokens(mainTokens.cacheWrite)}; subagents included in the total`,
+      },
+      { label: 'STEPS', value: String(run?.steps ?? 0), tip: 'Model calls in this task' },
+      { label: 'TOOLS', value: String(run?.tools ?? 0), tip: 'Tool calls in this task' },
+      { label: 'AGENTS', value: String(agents.length), tip: 'Subagents this task started' },
+    ]
+    const party = agents.map(a => {
+      const aCost = runCost * (weight(a.tokens) / allWeight)
+      const aTime = (a.endedAt ?? now) - a.startedAt
+      return {
+        a,
+        time: fmtTime(aTime),
+        detail: `${fmtTokens(totalTokens(a.tokens))} TOK · ~${fmtUsd(aCost)}`,
+      }
+    })
 
-    if (!run) {
+    if (Svg) {
+      const top = topScreen({ status, pct, title, prompt, limits, sessionUsd: costUsd, now: Math.floor(now / 60000) * 60000 })
+      const bottom = run ? bottomScreen({ stats, plan: run.plan, agents: party, frame }) : undefined
       return (
         <Box flexDirection="column" padding={1} gap={1}>
-          {Svg ? (
-            <Svg source={sceneSvg(0, 'idle', 'CLAUDE IS READY')} alt="The Claude mascot napping: no task running" isInteractive />
-          ) : (
-            <Box flexDirection="row" gap={2} alignItems="center">
-              {termMascot(false)}
-              <Text color="claude" weight="bold">Claude is ready  z z z</Text>
-            </Box>
+          <Svg
+            source={top.source}
+            width={W}
+            height={top.height}
+            isInteractive
+            alt={`${title}${pct === null ? '' : ` ${Math.round((pct ?? 0) * 100)}%`}. Usage: session spend ${fmtUsd(costUsd)}; ${limits.map(l => `${limitName(l.kind)} ${Math.round(l.percentUsed)}%`).join(', ') || 'no plan limits reported'}`}
+          />
+          {bottom && (
+            <Svg
+              source={bottom.source}
+              width={W}
+              height={bottom.height}
+              alt={`${stats.map(s => `${s.label} ${s.value}`).join(', ')}${party.length ? `. Subagents: ${party.map(x => `${x.a.description} ${x.a.status}`).join(', ')}` : ''}`}
+            />
           )}
-          <Text dimColor>Send a prompt and its progress, subagents, tokens, cost and time show here.</Text>
-          {usageView}
         </Box>
       )
     }
 
-    const isRunning = run.status === 'running'
-    const pct = progressOf(run, agents)
-    const elapsed = (run.endedAt ?? now) - run.startedAt
-    const runCost = Math.max(0, costUsd - run.costAtStart)
-    const allTokens = agents.reduce((n, a) => n + totalTokens(a.tokens), totalTokens(run.tokens))
-    const allWeight = agents.reduce((n, a) => n + weight(a.tokens), weight(run.tokens)) || 1
-    const title =
-      run.status === 'running' ? 'WORKING' : run.status === 'done' ? 'TASK CLEAR!' : run.status === 'stopped' ? 'STOPPED' : 'GAME OVER'
-    const label = `${title}${pct === null ? '' : ` ${Math.round(pct * 100)}%`}`
-    const current = run.plan?.items.find(i => i.status === 'in_progress')?.content
-    const stats: [string, string][] = [
-      ['TIME', fmtTime(elapsed)],
-      ['COST', fmtUsd(runCost)],
-      ['TOKENS', fmtTokens(allTokens)],
-      ['STEPS', String(run.steps)],
-      ['TOOLS', String(run.tools)],
-      ['AGENTS', String(agents.length)],
-    ]
-
+    // The terminal: the same screen in block characters, in the same order.
+    const width = Math.max(10, Math.min(40, (e.viewport?.columns ?? 50) - 14))
+    const isRunning = status === 'running'
     return (
       <Box flexDirection="column" padding={1} gap={1}>
-        {Svg ? (
-          <Svg source={sceneSvg(pct, run.status, title)} alt={`The Claude mascot on the progress track: ${label}`} isInteractive />
-        ) : (
-          <Box flexDirection="row" gap={2} alignItems="center">
-            {termMascot(isRunning)}
-            <Box flexDirection="column">
-              <Text color="claude" weight="bold">
-                {isRunning ? SPARK_FRAMES[frame % SPARK_FRAMES.length] : '✻'} {label}
+        <Box flexDirection="column" borderStyle="round" borderColor="claude" paddingX={1}>
+          <Text color="claude" weight="bold">♥ USAGE · spend {fmtUsd(costUsd)}</Text>
+          {limits.length === 0 && <Text dimColor>No plan limits reported yet.</Text>}
+          {limits.map(l => {
+            const resetMs = l.resetsAt ? Date.parse(l.resetsAt) - now : NaN
+            return (
+              <Text>
+                {limitName(l.kind).padEnd(8)}
+                <Text color={l.percentUsed >= 90 ? 'error' : l.percentUsed >= 70 ? 'warning' : 'success'}>{textBar(l.percentUsed / 100, Math.min(20, width), 0)}</Text> {Math.round(l.percentUsed)}%
+                {Number.isFinite(resetMs) ? <Text dimColor> · {fmtIn(resetMs).toLowerCase()}</Text> : ''}
               </Text>
-              <Text color="claude">{textBar(pct, width, frame)}</Text>
-            </Box>
+            )
+          })}
+        </Box>
+
+        <Box flexDirection="row" gap={2} alignItems="center">
+          <Box flexDirection="column">
+            {(isRunning && frame % 2 ? TERM_MASCOT_STEP : TERM_MASCOT).map(line => (
+              <Text color="claude">{line}</Text>
+            ))}
           </Box>
-        )}
+          <Box flexDirection="column">
+            <Text color="claude" weight="bold">
+              {isRunning ? SPARK_FRAMES[frame % SPARK_FRAMES.length] : '✻'} {title}
+              {run && pct !== null ? ` ${Math.round(pct * 100)}%` : ''}
+            </Text>
+            <Text color="claude">{textBar(status === 'idle' ? 0 : pct, width, frame)}</Text>
+            <Text dimColor>{clip(prompt, 60)}</Text>
+          </Box>
+        </Box>
 
-        <Text dimColor>{clip(run.prompt || '(continuing)', 120)}</Text>
-        {current && <Text color="claude">▸ {clip(current, 80)}</Text>}
-
-        {Svg ? (
-          <Svg source={hudSvg(stats)} alt={stats.map(([k, v]) => `${k} ${v}`).join(', ')} />
-        ) : (
+        {run && (
           <Box flexDirection="row" gap={2} flexWrap="wrap">
-            {stats.map(([k, v]) => (
-              <Box flexDirection="column" minWidth={70}>
-                <Text size="caption" dimColor>{k}</Text>
-                <Text weight="semibold" tabular mono>{v}</Text>
+            {stats.map(s => (
+              <Box flexDirection="column" minWidth={8}>
+                <Text dimColor>{s.label}</Text>
+                <Text weight="semibold">{s.value}</Text>
               </Box>
             ))}
           </Box>
         )}
 
-        <Text size="caption" dimColor>
-          in {fmtTokens(run.tokens.input)} · out {fmtTokens(run.tokens.output)} · cache read {fmtTokens(run.tokens.cacheRead)} · cache write {fmtTokens(run.tokens.cacheWrite)} (main){run.lastTool ? ` · last tool ${run.lastTool}` : ''}
-        </Text>
-
-        {run.plan && run.plan.items.length > 0 && (
+        {run?.plan && run.plan.items.length > 0 && (
           <Box flexDirection="column">
-            <Text weight="semibold">Quest log</Text>
-            {Svg ? (
-              <Svg
-                source={planSvg(run.plan.items)}
-                alt={run.plan.items.map(i => `${i.status}: ${i.content}`).join('; ')}
-                isInteractive
-              />
-            ) : (
-              run.plan.items.map(i => (
-                <Text dimColor={i.status === 'completed'} color={i.status === 'in_progress' ? 'claude' : undefined}>
-                  {i.status === 'completed' ? '■' : i.status === 'in_progress' ? '▶' : '□'} {clip(i.content, 70)}
+            <Text color="claude" weight="bold">QUEST LOG</Text>
+            {run.plan.items.map(i => (
+              <Text dimColor={i.status === 'completed'} color={i.status === 'in_progress' ? 'claude' : undefined}>
+                {i.status === 'completed' ? '■' : i.status === 'in_progress' ? '▶' : '□'} {clip(i.content, 70)}
+              </Text>
+            ))}
+          </Box>
+        )}
+
+        {party.length > 0 && (
+          <Box flexDirection="column">
+            <Text color="claude" weight="bold">PARTY</Text>
+            {party.map(({ a, time, detail }) => (
+              <Box key={a.key} flexDirection="column">
+                <Text weight="semibold">
+                  {a.status === 'running' ? SPARK_FRAMES[frame % SPARK_FRAMES.length] : a.status === 'done' ? '✓' : '✗'} {clip(a.description, 50)}
                 </Text>
-              ))
-            )}
+                <Text dimColor>{`${a.type} · ${time} · ${detail.toLowerCase()}`}</Text>
+              </Box>
+            ))}
           </Box>
         )}
-
-        {agents.length > 0 && (
-          <Box flexDirection="column" gap={1}>
-            <Text weight="semibold">Party (subagents)</Text>
-            {agents.map((a, idx) => {
-              const aRunning = a.status === 'running'
-              const aCost = runCost * (weight(a.tokens) / allWeight)
-              const aTime = (a.endedAt ?? now) - a.startedAt
-              const detail = `${a.status} · ${fmtTime(aTime)} · ${fmtTokens(totalTokens(a.tokens))} tokens · ≈${fmtUsd(aCost)} · ${a.steps} steps · ${a.tools} tools${a.model ? ` · ${a.model}` : ''}${a.lastTool ? ` · ${a.lastTool}` : ''}`
-              return (
-                <Box key={a.key} flexDirection="column">
-                  {Svg ? (
-                    <Svg source={agentSvg(a, idx)} alt={`Subagent ${a.description}: ${a.status}`} isInteractive />
-                  ) : (
-                    <Box flexDirection="column" borderStyle="round" borderColor="claude" paddingX={1}>
-                      <Text weight="semibold">
-                        {aRunning ? SPARK_FRAMES[frame % SPARK_FRAMES.length] : a.status === 'done' ? '✓' : '✗'} {clip(a.description, 50)}{' '}
-                        <Text dimColor>({a.type})</Text>
-                      </Text>
-                      <Text color="claude">{textBar(aRunning ? null : 1, width, frame)}</Text>
-                    </Box>
-                  )}
-                  <Text size="caption" dimColor tabular>{detail}</Text>
-                </Box>
-              )
-            })}
-          </Box>
-        )}
-
-        {usageView}
-
-        <Text size="footnote" dimColor>
-          Task cost is the session's real spend since this prompt; per-subagent cost is an estimate split by token weight.
-        </Text>
       </Box>
     )
   })

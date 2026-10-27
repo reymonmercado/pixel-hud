@@ -1,5 +1,5 @@
 {
-  "name": "my-mods",
+  "name": "pixel-hud",
   "owner": { "name": "reymonmercado" },
-  "plugins": [{ "name": "spark-progress", "source": "./" }]
+  "plugins": [{ "name": "pixel-hud", "source": "./" }]
 }

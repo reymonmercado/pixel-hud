@@ -1,11 +1,11 @@
 import { expect, test } from 'claude-code/testing'
 
 const PANE = {
-  plugin: 'spark-progress',
+  plugin: 'pixel-hud',
   component: 'Pane',
-  requestId: 'spark-progress',
+  requestId: 'pixel-hud',
   props: {
-    title: 'Claude progress',
+    title: 'Pixel HUD',
     isFocused: false,
     bodyColumns: 60,
     placement: 'dock',
@@ -45,13 +45,12 @@ test('the pane shows a task, its plan and a subagent, on every surface', async (
   expect((await term.find({ type: 'Text', text: /Search the repo/ }))?.text).toContain('✓')
   expect(await term.find({ type: 'Text', text: /Writing code/ })).toBeTruthy()
   expect((await term.find({ type: 'Text', text: /^\$0\.25$/ }))?.text).toBe('$0.25')
-  expect((await term.find({ type: 'Text', text: /THIS WEEK/ }))?.text).toContain('75%')
+  expect((await term.find({ type: 'Text', text: /^WEEK/ }))?.text).toContain('75%')
   await term.unmount()
 
   for (const surface of ['desktop', 'vscode', 'mobile'] as const) {
     const ui = await $.ui.mount({ ...PANE, surface })
-    expect((await ui.find({ type: 'Text', text: /done · .*tokens/ }))?.text).toContain('≈')
-    expect(await ui.find({ type: 'Svg' })).toBeTruthy()
+    expect(await ui.findAll({ type: 'Svg' })).toHaveLength(2)
     await ui.unmount()
   }
 })

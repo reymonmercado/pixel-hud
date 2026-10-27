@@ -1,6 +1,6 @@
 {
-  "name": "spark-progress",
-  "version": "0.1.0",
-  "description": "A Claude-themed pane showing the running task's progress, its subagents, tokens, cost and elapsed time",
+  "name": "pixel-hud",
+  "version": "0.2.0",
+  "description": "An 8-bit, Claude-themed HUD pane: task progress, usage limits, quest log, subagents, tokens, cost and time",
   "types": "./types/index.d.ts"
 }

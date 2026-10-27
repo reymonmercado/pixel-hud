@@ -37,7 +37,7 @@ export type Limit = { kind: string; percentUsed: number; resetsAt?: string }
 
 declare module 'claude-code' {
   interface PluginState {
-    'spark-progress': {
+    'pixel-hud': {
       run: Run | null
       agents: SubAgent[]
       costUsd: number
